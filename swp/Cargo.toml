@@ -1,0 +1,9 @@
+[package]
+name = "swp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+swp-proc-macros = { path = "proc-macros" }
+serde = "1.0"
+rmp-serde = "1.1.1"

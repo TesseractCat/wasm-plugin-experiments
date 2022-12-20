@@ -1,4 +1,6 @@
-pub use swp_proc_macros::swp;
+#![feature(fn_traits)]
+
+pub use swp_proc_macros::{swp, swp_extern};
 pub use rmp_serde;
 
 // https://radu-matei.com/blog/practical-guide-to-wasm-memory/#passing-arrays-to-rust-webassembly-modules

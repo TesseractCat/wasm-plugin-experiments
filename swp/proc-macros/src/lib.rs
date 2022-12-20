@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 
 use proc_macro2::Span;
 use quote::quote;
-use syn::{ItemFn, Ident, FnArg, Type, PatType, Pat, ItemForeignMod, ForeignItem};
+use syn::{ItemFn, Ident, FnArg, Type, PatType, Pat, ItemForeignMod, ForeignItem, Attribute, Token};
 
 #[proc_macro_attribute]
 pub fn swp(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -47,11 +47,11 @@ pub fn swp(_attr: TokenStream, item: TokenStream) -> TokenStream {
             swp::rmp_serde::encode::write_named(
                 &mut cursor,
                 &std::ops::Fn::call(&#name, i)
-            ).unwrap();
+            ).expect("Failed to serialize return values to linear memory");
             // Write length
             let len: u32 = cursor.position() as u32 - 4;
             cursor.set_position(0);
-            cursor.write_all(&len.to_le_bytes());
+            cursor.write_all(&len.to_le_bytes()).expect("Failed to write to linear memory");
 
             // Return pointer
             let pointer = buffer.as_mut_ptr();
@@ -60,7 +60,6 @@ pub fn swp(_attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
-    //println!("{}", expanded);
     TokenStream::from(expanded)
 }
 
@@ -73,8 +72,6 @@ pub fn swp_extern(_attr: TokenStream, item: TokenStream) -> TokenStream {
     for item in ast.items.iter_mut() {
         match item {
             ForeignItem::Fn(x) => {
-                println!("{:?}", x.sig.ident);
-
                 let name = x.sig.ident.clone();
                 let inputs = x.sig.inputs.clone();
                 let input_types: Vec<Type> = inputs.iter().filter_map(|x| match x {
@@ -94,7 +91,7 @@ pub fn swp_extern(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 bindings.push(syn::parse2(quote! {
                     fn #name(#inputs) #output {
                         let input_tuple: (#(#input_types),*,) = (#(#input_names),*,);
-                        let mut serialized: Vec<u8> = swp::rmp_serde::to_vec(&input_tuple).unwrap();
+                        let mut serialized: Vec<u8> = swp::rmp_serde::to_vec(&input_tuple).expect("Failed to serialize parameters to linear memory");
 
                         let data = unsafe {
                             let ptr = #host_name(serialized.as_mut_ptr(), serialized.len());
@@ -103,7 +100,7 @@ pub fn swp_extern(_attr: TokenStream, item: TokenStream) -> TokenStream {
                             Vec::from_raw_parts(ptr.offset(4), len, len)
                         };
 
-                        // Deserialize arguments
+                        // Deserialize response
                         match swp::rmp_serde::from_slice(data.as_slice()) {
                             Ok(i) => i,
                             Err(_) => { panic!("RPC responded with invalid data!") }
@@ -116,6 +113,15 @@ pub fn swp_extern(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 x.sig.inputs.push(syn::parse2(quote! { ptr: *mut u8 }).unwrap());
                 x.sig.inputs.push(syn::parse2(quote! { len: usize }).unwrap());
                 x.sig.output = syn::parse2(quote! { -> *mut u8 }).unwrap();
+
+                let name_as_attr = format!("{}", name);
+                x.attrs.push(Attribute {
+                    pound_token: Token![#](Span::call_site()),
+                    bracket_token: syn::token::Bracket { span: Span::call_site() },
+                    style: syn::AttrStyle::Outer,
+                    path: syn::parse_str("link_name").unwrap(),
+                    tokens: quote! { = #name_as_attr },
+                });
             },
             _ => panic!("Encountered non-function in #[swp_extern] block")
         }
@@ -125,7 +131,6 @@ pub fn swp_extern(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #ast
         #(#bindings)*
     };
-    println!("{}", expanded);
 
     TokenStream::from(expanded)
 }

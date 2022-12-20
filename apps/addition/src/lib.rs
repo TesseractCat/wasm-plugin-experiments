@@ -5,12 +5,12 @@ use serde::{Serialize, Deserialize};
 
 #[swp_extern]
 extern "C" {
-    fn print(text: &str, num: i32);
+    fn print(text: &str);
 }
 
 #[swp]
 fn echo(text: &str) {
-    print(text, 42);
+    print(text);
 }
 
 #[derive(Serialize, Deserialize)]

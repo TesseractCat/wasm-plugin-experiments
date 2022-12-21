@@ -36,7 +36,7 @@ pub fn swp(_attr: TokenStream, item: TokenStream) -> TokenStream {
             // Deserialize arguments
             let i: #input_type = match swp::rmp_serde::from_slice(data.as_slice()) {
                 Ok(i) => i,
-                Err(_) => { panic!("RPC called with invalid arguments!") }
+                Err(_) => { return 0 as *mut u8; }
             };
 
             // Create buffer + cursor, start writing after length placeholder

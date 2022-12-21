@@ -26,6 +26,6 @@ fn add(a: &str, b: &str) -> String {
 }
 
 #[swp]
-fn extract(person: Person) -> bool {
-    person.cool
+fn extract(person: Person) -> String {
+    person.name
 }

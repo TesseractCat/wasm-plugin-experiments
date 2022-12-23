@@ -7,3 +7,4 @@ edition = "2021"
 swp-proc-macros = { path = "proc-macros" }
 serde = "1.0"
 rmp-serde = "1.1.1"
+rmpv = {version = "1.0", features = ["with-serde"]}

@@ -22,7 +22,9 @@ pub fn swp(_attr: TokenStream, item: TokenStream) -> TokenStream {
             FnArg::Typed(x) => Some(*x.clone().ty)
         }
     }).collect();
-    let input_type = quote! { (#(#input_types),*,) };
+    let input_type = if input_types.len() != 0 {
+        quote! { (#(#input_types),*,) }
+    } else { quote! { () } };
 
     let expanded = quote! {
         #ast
